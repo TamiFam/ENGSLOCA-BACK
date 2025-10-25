@@ -5,8 +5,9 @@ const wordSchema = new mongoose.Schema({
   translation: { type: String, required: true },
   partOfSpeech: { type: String, required: true },
   category: { type: String, required: true },
-  examples: [String],
   difficulty: { type: String, default: 'beginner' },
+  examples: [{ type: String }],  // 👈 ДОБАВИТЬ - массив примеров
+  notes: { type: String }, 
   week: { type: Number, required: true, default: 1 }, // 👈 Добавляем неделю
   transcriptionUK: {type: String},
   transcriptionUS: {type: String},

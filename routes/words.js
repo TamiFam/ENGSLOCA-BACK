@@ -13,7 +13,7 @@ import { updateLastSeenMiddleware } from "../middleware/updateLastSeenMiddleware
 const router = express.Router();
 
 // 📖 GET запросы - доступны без авторизации
-router.get("/" ,authMiddleware,updateLastSeenMiddleware, getWords);
+router.get("/" ,updateLastSeenMiddleware, getWords);
 router.get("/weeks",updateLastSeenMiddleware, getAvailableWeeks); // 👈 Новый маршрут для получения недель
 
 // ✏️ POST, PUT, DELETE запросы - требуют авторизации
