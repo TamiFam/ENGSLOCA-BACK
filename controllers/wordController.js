@@ -17,11 +17,12 @@ export const createWord = async (req, res) => {
     
     const wordData = {
       ...req.body,
-      createdBy: null 
+      author: req.user.id
     };
     
     const word = await Word.create(wordData);
     console.log('✅ Слово создано:', word);
+    await word.populate('author', 'username role');
     
     res.status(201).json(word);
   } catch (err) {
@@ -30,11 +31,11 @@ export const createWord = async (req, res) => {
 
     if (err.code === 11000) {
       return res.status(400).json({
-        message: 'Слово уже существует'
+        message: 'Слово уже существует' 
       });
     }
 
-    
+
     res.status(500).json({ 
       message: "Ошибка при создании слова",
       error: err.message 

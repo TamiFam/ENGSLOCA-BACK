@@ -8,10 +8,15 @@ const wordSchema = new mongoose.Schema({
   difficulty: { type: String, default: 'beginner' },
   examples: [{ type: String }],  
   notes: { type: String }, 
+  author: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   week: { type: Number, required: true, default: 1 }, 
   transcriptionUK: {type: String},
   transcriptionUS: {type: String},
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  
 }, { timestamps: true });
 
 export default mongoose.model('Word', wordSchema);
