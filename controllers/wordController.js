@@ -3,11 +3,21 @@ import Word from "../models/Word.js";
 export const createWord = async (req, res) => {
   try {
     console.log('📝 Данные для создания слова:', req.body);
+    // const {name} = req.body
+    // const exsitingWord = await Word.find({name})
+
+    // if(exsitingWord) {
+    //   return  res.status(400).json({
+    //     message: 'Слово уже существует',
+    //     word: exsitingWord
+
+    //   })
+    // }
     
-    // Временно убираем проверку авторизации
+    
     const wordData = {
       ...req.body,
-      createdBy: null // 👈 временно null вместо req.user.id
+      createdBy: null 
     };
     
     const word = await Word.create(wordData);
@@ -16,6 +26,15 @@ export const createWord = async (req, res) => {
     res.status(201).json(word);
   } catch (err) {
     console.error('❌ Ошибка при создании слова:', err);
+
+
+    if (err.code === 11000) {
+      return res.status(400).json({
+        message: 'Слово уже существует'
+      });
+    }
+
+    
     res.status(500).json({ 
       message: "Ошибка при создании слова",
       error: err.message 
