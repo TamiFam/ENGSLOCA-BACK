@@ -63,6 +63,7 @@ export const getWords = async (req, res) => {
 
     const total = await Word.countDocuments(query);
     const words = await Word.find(query)
+    .populate('author', 'username role')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
