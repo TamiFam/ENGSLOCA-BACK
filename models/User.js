@@ -1,5 +1,11 @@
 import mongoose from "mongoose";
 
+const TestResultSchema = new mongoose.Schema({
+  week: Number,        // номер недели или дата
+  score: Number,       // результат теста
+  date: { type: Date, default: Date.now },
+});
+
 const UserSchema = new mongoose.Schema({
   username: { 
     type: String, 
@@ -16,6 +22,7 @@ const UserSchema = new mongoose.Schema({
     default: "member" 
   },
   lastSeen: { type: Date, default: Date.now },
+  testResults: [TestResultSchema], // <── добавлено
 }, { timestamps: true });
 
 export default mongoose.model("User", UserSchema);

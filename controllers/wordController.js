@@ -128,33 +128,3 @@ export const getAvailableWeeks = async (req, res) => {
     res.status(500).json({ message: "Ошибка при получении списка недель" });
   }
 };
-export const getWordsByWeek = async (req, res) => {
-  try {
-    const { week } = req.params;
-    
-    if (!week) {
-      return res.status(400).json({ message: "Не указана неделя" });
-    }
-
-    const words = await Word.find({ week: Number(week) })
-      .populate('author', 'username role')
-      .sort({ createdAt: -1 });
-
-    console.log(`📚 Найдено ${words.length} слов для недели ${week}`);
-
-    res.json({ 
-      success: true,
-      data: {
-        week: Number(week),
-        words: words,
-        count: words.length
-      }
-    });
-  } catch (err) {
-    console.error('❌ Ошибка при получении слов по неделе:', err);
-    res.status(500).json({ 
-      message: "Ошибка при получении слов",
-      error: err.message 
-    });
-  }
-};

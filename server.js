@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import wordRoutes from "./routes/words.js";
 import userRoutes from "./routes/userRoutes.js";
+import testRoutes from "./routes/testRoutes.js"
 import User from "./models/User.js";
 dotenv.config();
 const app = express();
@@ -30,6 +31,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/words", wordRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/tests", testRoutes);
 
 // Явная обработка подключения к MongoDB
 const connectDB = async () => {

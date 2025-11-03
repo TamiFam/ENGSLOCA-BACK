@@ -5,7 +5,7 @@ import {
   updateWord,
   deleteWord,
   getAvailableWeeks,
-  getWordsByWeek 
+ 
 } from "../controllers/wordController.js";
 
 import { authMiddleware } from "../middleware/authMiddleware.js";
@@ -16,7 +16,7 @@ const router = express.Router();
 // 📖 GET запросы - доступны без авторизации
 router.get("/" ,updateLastSeenMiddleware, getWords);
 router.get("/weeks",updateLastSeenMiddleware, getAvailableWeeks); // 👈 Новый маршрут для получения недель
-router.get("/week/:week", updateLastSeenMiddleware, getWordsByWeek);
+
 
 // ✏️ POST, PUT, DELETE запросы - требуют авторизации
 router.post("/",authMiddleware,updateLastSeenMiddleware, createWord);   //authMiddleware
