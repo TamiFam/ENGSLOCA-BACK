@@ -10,6 +10,7 @@ import testRoutes from "./routes/testRoutes.js"
 import User from "./models/User.js";
 dotenv.config();
 const app = express();
+
 app.options('*', cors());
 
 app.use((req, res, next) => {
