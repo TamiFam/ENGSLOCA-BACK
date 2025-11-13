@@ -10,6 +10,7 @@ import testRoutes from "./routes/testRoutes.js"
 import User from "./models/User.js";
 dotenv.config();
 const app = express();
+app.options('*', cors());
 
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.url} from origin: ${req.headers.origin}`);
@@ -24,7 +25,8 @@ app.use(cors({
   ] ,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie']
 }));
 app.use(express.json());
 
