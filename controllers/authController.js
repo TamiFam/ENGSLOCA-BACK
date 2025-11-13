@@ -19,9 +19,16 @@ export const register = async (req, res) => {
     });
 
     const token = createToken(user);
+       // Ставим HttpOnly cookie
+       res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 1000 * 60 * 60 * 24, // 1 день
+      });
     
     res.json({ 
-      token, 
+      
       user: { 
         id: user._id, 
         username: user.username, 
@@ -44,8 +51,16 @@ export const login = async (req, res) => {
     if (!valid) return res.status(401).json({ message: "Неверный пароль" });
 
     const token = createToken(user);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 1000 * 60 * 60 * 24,
+    });
+
     res.json({ 
-      token, 
+     
       user: { 
         id: user._id, 
         username: user.username, 
@@ -55,6 +70,10 @@ export const login = async (req, res) => {
   } catch {
     res.status(500).json({ message: "Ошибка входа" });
   }
+};
+export const logout = (req, res) => {
+  res.clearCookie("token");
+  res.json({ message: "Вы вышли из системы" });
 };
 
 export const getMe = async (req, res) => {
