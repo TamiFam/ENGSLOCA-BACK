@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import cookieParser from 'cookie-parser';
 
 import authRoutes from "./routes/auth.js";
 import wordRoutes from "./routes/words.js";
@@ -11,7 +12,7 @@ import User from "./models/User.js";
 dotenv.config();
 const app = express();
 
-
+app.use(cookieParser());
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.url} from origin: ${req.headers.origin}`);
   next();
