@@ -43,15 +43,43 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
+    console.log("=== LOGIN DEBUG ===");
+    
     const { username, password } = req.body;
+    console.log("Username:", username);
+    
+    if (!username || !password) {
+      return res.status(400).json({ message: "Все поля обязательны" });
+    }
+
     const user = await User.findOne({ username });
-    if (!user) return res.status(404).json({ message: "Пользователь не найден" });
+    console.log("User found:", user ? "YES" : "NO");
+    
+    if (!user) {
+      return res.status(404).json({ message: "Пользователь не найден" });
+    }
 
+    console.log("User ID:", user._id);
+    console.log("User role:", user.role);
+    
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return res.status(401).json({ message: "Неверный пароль" });
+    console.log("Password valid:", valid);
+    
+    if (!valid) {
+      return res.status(401).json({ message: "Неверный пароль" });
+    }
 
+    // 🔥 Проверка перед созданием токена
+    console.log("Checking JWT_SECRET...");
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is missing');
+    }
+    
+    console.log("Creating token...");
     const token = createToken(user);
+    console.log("Token created successfully");
 
+    console.log("Setting cookie...");
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
@@ -59,16 +87,19 @@ export const login = async (req, res) => {
       maxAge: 1000 * 60 * 60 * 24,
     });
 
+    console.log("Sending response...");
     res.json({ 
-     
       user: { 
         id: user._id, 
         username: user.username, 
         role: user.role 
       } 
     });
-  } catch {
-    res.status(500).json({ message: "Ошибка входа" });
+    
+  } catch (error) {
+    console.error("💥 LOGIN ERROR:", error.message);
+    console.error("Stack:", error.stack);
+    res.status(500).json({ message: "Ошибка входа: " + error.message });
   }
 };
 export const logout = (req, res) => {
