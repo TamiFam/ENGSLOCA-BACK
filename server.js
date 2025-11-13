@@ -11,7 +11,6 @@ import User from "./models/User.js";
 dotenv.config();
 const app = express();
 
-app.options('*', cors());
 
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.url} from origin: ${req.headers.origin}`);
