@@ -44,6 +44,13 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     console.log("=== LOGIN DEBUG ===");
+    console.log("req.body:", req.body);
+    
+    // 👇 ЗАЩИТА ОТ ПУСТОГО BODY
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.log("🛑 Empty body detected, skipping...");
+      return res.status(400).json({ message: "Пустой запрос" });
+    }
     
     const { username, password } = req.body;
     console.log("Username:", username);
@@ -60,7 +67,6 @@ export const login = async (req, res) => {
     }
 
     console.log("User ID:", user._id);
-    console.log("User role:", user.role);
     
     const valid = await bcrypt.compare(password, user.passwordHash);
     console.log("Password valid:", valid);
@@ -69,17 +75,10 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Неверный пароль" });
     }
 
-    // 🔥 Проверка перед созданием токена
-    console.log("Checking JWT_SECRET...");
-    if (!process.env.JWT_SECRET) {
-      throw new Error('JWT_SECRET is missing');
-    }
-    
     console.log("Creating token...");
     const token = createToken(user);
     console.log("Token created successfully");
 
-    console.log("Setting cookie...");
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
@@ -98,7 +97,6 @@ export const login = async (req, res) => {
     
   } catch (error) {
     console.error("💥 LOGIN ERROR:", error.message);
-    console.error("Stack:", error.stack);
     res.status(500).json({ message: "Ошибка входа: " + error.message });
   }
 };
