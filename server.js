@@ -11,12 +11,7 @@ import testRoutes from "./routes/testRoutes.js"
 import User from "./models/User.js";
 dotenv.config();
 const app = express();
-app.use(express.json());
 
-app.use((req, res, next) => {
-  console.log(`🌐 ${req.method} ${req.url} from origin: ${req.headers.origin}`);
-  next();
-});
 
 app.use(cors({
   origin: [
@@ -29,8 +24,14 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Set-Cookie']
 }));
+app.use(express.json());
 
 app.use(cookieParser());
+
+app.use((req, res, next) => {
+  console.log(`🌐 ${req.method} ${req.url} from origin: ${req.headers.origin}`);
+  next();
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/words", wordRoutes);
