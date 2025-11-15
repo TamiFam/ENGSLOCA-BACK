@@ -4,7 +4,7 @@ export const addTestResult = async (req, res) => {
   console.log("📥 Получен запрос на addTestResult", req.body);
 
   try {
-    const { userId, week, score } = req.body;
+    const { userId, week, score, pageInfo } = req.body;
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -41,7 +41,8 @@ export const addTestResult = async (req, res) => {
       user.testResults.push({ 
         week, 
         score,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        pageInfo
       });
       updated = true
     }
