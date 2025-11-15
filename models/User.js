@@ -4,6 +4,13 @@ const TestResultSchema = new mongoose.Schema({
   week: Number,        // номер недели или дата
   score: Number,       // результат теста
   date: { type: Date, default: Date.now },
+  pageInfo: {          
+    page: String,      // 'all' или номер страницы
+    mode: String,      // 'page' или 'all'
+    pageNumber: Number,
+    wordsCount: Number,
+    totalPages: Number
+  }
 });
 
 const UserSchema = new mongoose.Schema({
