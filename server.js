@@ -3,15 +3,17 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from 'cookie-parser';
+import { createServer } from 'http';
 
 import authRoutes from "./routes/auth.js";
 import wordRoutes from "./routes/words.js";
 import userRoutes from "./routes/userRoutes.js";
 import testRoutes from "./routes/testRoutes.js"
 import User from "./models/User.js";
+import ChatServer from "./websocket/chatServer.js";
 dotenv.config();
 const app = express();
-
+const server = createServer(app);
 
 app.use(cors({
   origin: [
@@ -38,6 +40,13 @@ app.use("/api/words", wordRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tests", testRoutes);
 
+// Инициализируем WebSocket сервер
+let chatServer;
+const initWebSocket = () => {
+  chatServer = new ChatServer(server);
+  console.log('💬 WebSocket chat server initialized');
+};
+
 // Явная обработка подключения к MongoDB
 const connectDB = async () => {
   try {
@@ -48,8 +57,10 @@ const connectDB = async () => {
     console.log('✅ MongoDB connected successfully');
     await User.syncIndexes(); // 👈 ЭТА СТРОКА ПЕРЕСОЗДАЕТ ИНДЕКСЫ
   console.log('✅ Database indexes synced');
+
+  initWebSocket();
     
-    app.listen(process.env.PORT, () =>
+  server.listen(process.env.PORT, () =>
       console.log(`🚀 Server running on port ${process.env.PORT}`)
     );
   } catch (err) {
