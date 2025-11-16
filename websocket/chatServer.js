@@ -1,11 +1,11 @@
 // websocket/chatServer.js
-import WebSocket from 'ws';
+import { WebSocketServer } from 'ws';
 import { wsAuthMiddleware } from './wsAuthMiddleware.js';
 import User from "../models/User.js";
 
 class ChatServer {
   constructor(server) {
-    this.wss = new WebSocket.Server({ 
+    this.wss = new WebSocketServer({ 
       server,
       path: '/ws'
     });
