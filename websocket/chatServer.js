@@ -108,7 +108,7 @@ class ChatServer {
       
       if (messageData.type === 'chat_message' && messageData.text.trim()) {
         
-        console.log('👤 User info:', userInfo); // ← ДОБАВЬТЕ ЭТОТ ЛОГ
+        console.log('👤 User info:', userInfo);
         
         // Проверяем права на отправку сообщений
         if (userInfo.role === 'viewer') {
@@ -120,22 +120,22 @@ class ChatServer {
           return;
         }
   
-         // 👇 СОЗДАЕМ СООБЩЕНИЕ В MONGODB
-         const savedMessage = await Message.create({
-            text: messageData.text.trim(),
-            user: {
-              id: userInfo.id,
-              username: userInfo.username,
-              role: userInfo.role
-            }
-          });
-
-          const message = {
-            id: savedMessage._id.toString(), // ← ИСПРАВЛЕНО!
-            text: savedMessage.text,
-            user: savedMessage.user,
-            timestamp: savedMessage.timestamp.toISOString()
-          };
+        // 👇 СОЗДАЕМ СООБЩЕНИЕ В MONGODB
+        const savedMessage = await Message.create({
+          text: messageData.text.trim(),
+          user: {
+            id: userInfo.id,
+            username: userInfo.username,
+            role: userInfo.role
+          }
+        });
+  
+        const message = {
+          id: savedMessage._id.toString(),
+          text: savedMessage.text,
+          user: savedMessage.user,
+          timestamp: savedMessage.timestamp.toISOString()
+        };
   
         console.log('💭 Creating new message:', message);
   
@@ -145,12 +145,14 @@ class ChatServer {
             type: 'error',
             data: 'Message too long (max 500 characters)'
           });
+          // Удаляем слишком длинное сообщение из базы
+          await Message.findByIdAndDelete(savedMessage._id);
           return;
         }
   
         // Сохраняем сообщение
         this.messages.push(message);
-        console.log('💾 Messages count after save:', this.messages.length); // ← ДОБАВЬТЕ ЭТОТ ЛОГ
+        console.log('💾 Messages count after save:', this.messages.length);
         
         // Ограничиваем историю
         if (this.messages.length > 100) {
@@ -158,7 +160,7 @@ class ChatServer {
         }
   
         // Рассылаем всем
-        console.log('📢 Broadcasting to', this.wss.clients.size, 'clients'); // ← ДОБАВЬТЕ ЭТОТ ЛОГ
+        console.log('📢 Broadcasting to', this.wss.clients.size, 'clients');
         
         this.broadcast({
           type: 'new_message',
@@ -166,6 +168,19 @@ class ChatServer {
         });
   
         console.log(`✅ Message broadcasted: ${userInfo.username}: ${message.text}`);
+      }
+      // 👇 ДОБАВЬТЕ ЭТУ ОБРАБОТКУ ДЛЯ УДАЛЕНИЯ СООБЩЕНИЙ
+      else if (messageData.type === 'delete_message') {
+        console.log('🗑️ Delete message request:', messageData.messageId);
+        await this.handleDeleteMessage(messageData.messageId, userInfo);
+      }
+      // 👇 И ДЛЯ ОЧИСТКИ ЧАТА
+      else if (messageData.type === 'clear_chat' && userInfo.role === 'admin') {
+        console.log('🧹 Clear chat request from admin');
+        await this.handleClearChat(userInfo);
+      }
+      else {
+        console.log('❓ Unknown message type:', messageData.type);
       }
   
     } catch (error) {
