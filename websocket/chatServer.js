@@ -2,6 +2,7 @@
 import { WebSocketServer } from 'ws';
 import { wsAuthMiddleware } from './wsAuthMiddleware.js';
 import User from "../models/User.js";
+import Message from '../models/Message.js';
 
 class ChatServer {
   constructor(server) {
@@ -40,12 +41,9 @@ class ChatServer {
 
         this.onlineUsers.set(ws, userInfo);
         console.log(`💬 User ${user.username} (${user.role}) connected to chat`);
+        await this.loadMessageHistory(ws)
 
-        // Отправляем историю сообщений
-        this.sendToUser(ws, {
-          type: 'message_history',
-          data: this.messages.slice(-50)
-        });
+       
 
         // Уведомляем всех о новом пользователе
         this.broadcastOnlineUsers();
@@ -67,6 +65,41 @@ class ChatServer {
       }
     });
   }
+  async loadMessageHistory(ws) {
+    try {
+      // Загружаем последние 50 сообщений из базы
+      const messagesFromDB = await Message.find()
+        .sort({ timestamp: -1 })
+        .limit(50)
+        .lean(); // lean() для лучшей производительности
+      
+      // Преобразуем для клиента
+      const formattedMessages = messagesFromDB.reverse().map(msg => ({
+        id: msg._id.toString(),
+        text: msg.text,
+        user: msg.user,
+        timestamp: msg.timestamp.toISOString()
+      }));
+
+      // Сохраняем в памяти для активной сессии
+      this.messages = formattedMessages;
+
+      // Отправляем историю клиенту
+      this.sendToUser(ws, {
+        type: 'message_history',
+        data: formattedMessages
+      });
+
+      console.log(`📚 Loaded ${formattedMessages.length} messages from database`);
+    } catch (error) {
+      console.error('❌ Error loading message history:', error);
+      // В случае ошибки отправляем пустую историю
+      this.sendToUser(ws, {
+        type: 'message_history',
+        data: []
+      });
+    }
+  }
 
   async handleMessage(data, userInfo) {
     try {
@@ -87,16 +120,22 @@ class ChatServer {
           return;
         }
   
-        const message = {
-          id: Date.now(),
-          text: messageData.text.trim(),
-          user: {
-            id: userInfo.id,
-            username: userInfo.username,
-            role: userInfo.role
-          },
-          timestamp: new Date().toISOString()
-        };
+         // 👇 СОЗДАЕМ СООБЩЕНИЕ В MONGODB
+         const savedMessage = await Message.create({
+            text: messageData.text.trim(),
+            user: {
+              id: userInfo.id,
+              username: userInfo.username,
+              role: userInfo.role
+            }
+          });
+
+          const message = {
+            id: savedMessage._id.toString(), // ← ИСПРАВЛЕНО!
+            text: savedMessage.text,
+            user: savedMessage.user,
+            timestamp: savedMessage.timestamp.toISOString()
+          };
   
         console.log('💭 Creating new message:', message);
   
@@ -140,7 +179,7 @@ class ChatServer {
   
   
 
-  handleDeleteMessage(messageId, userInfo) {
+  async handleDeleteMessage(messageId, userInfo) {
     if (userInfo.role !== 'admin') {
       this.sendToUser(userInfo.ws, {
         type: 'error',
@@ -149,14 +188,29 @@ class ChatServer {
       return;
     }
 
-    const messageIndex = this.messages.findIndex(msg => msg.id === messageId);
-    if (messageIndex !== -1) {
-      this.messages.splice(messageIndex, 1);
-      this.broadcast({
-        type: 'message_deleted',
-        data: messageId
-      });
-      console.log(`🗑️ Admin ${userInfo.username} deleted message ${messageId}`);
+    try {
+      // Удаляем из MongoDB
+      const result = await Message.findByIdAndDelete(messageId);
+      
+      if (result) {
+        // Удаляем из памяти
+        const messageIndex = this.messages.findIndex(msg => msg.id === messageId);
+        if (messageIndex !== -1) {
+          this.messages.splice(messageIndex, 1);
+        }
+
+        // Уведомляем всех клиентов
+        this.broadcast({
+          type: 'message_deleted',
+          data: messageId
+        });
+
+        console.log(`🗑️ Admin ${userInfo.username} deleted message ${messageId}`);
+      } else {
+        console.log(`❌ Message ${messageId} not found in database`);
+      }
+    } catch (error) {
+      console.error('❌ Error deleting message from database:', error);
     }
   }
 
@@ -207,6 +261,26 @@ class ChatServer {
       data: onlineUsersList
     });
   }
+  async handleClearChat(userInfo) {
+    try {
+      // Удаляем все сообщения из MongoDB
+      const result = await Message.deleteMany({});
+      
+      // Очищаем память
+      this.messages = [];
+      
+      // Уведомляем всех клиентов
+      this.broadcast({
+        type: 'chat_cleared'
+      });
+
+      console.log(`🧹 Admin ${userInfo.username} cleared all messages (${result.deletedCount} deleted from DB)`);
+    } catch (error) {
+      console.error('❌ Error clearing chat:', error);
+    }
+  }
+
+
 
   // Метод для отправки системных сообщений
   sendSystemMessage(text) {
