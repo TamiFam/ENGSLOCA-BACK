@@ -10,6 +10,7 @@ import authRoutes from "./routes/auth.js";
 import wordRoutes from "./routes/words.js";
 import userRoutes from "./routes/userRoutes.js";
 import testRoutes from "./routes/testRoutes.js";
+import deepseekRouter from "./routes/deepseek.js"
 import User from "./models/User.js";
 import ChatServer from "./websocket/chatServer.js";
 
@@ -42,6 +43,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/words", wordRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tests", testRoutes);
+app.use("/api/deepseek", deepseekRouter);
 
 // Инициализируем WebSocket сервер
 let chatServer;
