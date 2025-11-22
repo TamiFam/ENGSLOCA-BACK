@@ -27,6 +27,8 @@ router.post("/check-sentence", async (req, res) => {
             role: "system",
             content: `Проверь английское предложение. 
 ВАЖНО: В correctedSentence должно остаться слово "${word}"!
+2. feedback должен быть на русском языке!
+3. correctedTranslation - перевод на русский.
 Верни JSON: {correct: boolean, correctedSentence: string, correctedTranslation: string, feedback: string}`
           },
           {
@@ -42,7 +44,7 @@ router.post("/check-sentence", async (req, res) => {
         headers: {
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         },
-        timeout: 15000,
+        timeout: 12000,
       }
     );
 
