@@ -16,7 +16,7 @@ router.post("/check-sentence", async (req, res) => {
   }
 
   try {
-    console.log(`🔍 Checking: "${word}" in "${sentence}"`); // Логируем запрос
+    console.log(`🔍 Checking: "${word}" in "${sentence}"`);
     
     const response = await axios.post(
       "https://api.deepseek.com/v1/chat/completions",
@@ -25,50 +25,96 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "Проверь английское предложение. Верни JSON: {correct, correctedSentence, correctedTranslation, feedback}. Не меняй исходное слово."
+            content: `Проверь английское предложение. 
+ВАЖНО: В correctedSentence должно остаться слово "${word}"!
+Верни JSON: {correct: boolean, correctedSentence: string, correctedTranslation: string, feedback: string}`
           },
           {
             role: "user", 
-            content: `Слово: ${word}. Предложение: ${sentence}.`
+            content: `Слово: ${word}. Предложение: ${sentence}. Исправь предложение, сохранив слово "${word}".`
           }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 100,
+        max_tokens: 150,
         temperature: 0,
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         },
-        timeout: 10000, // 10 секунд
+        timeout: 15000,
       }
     );
 
-    console.log("✅ AI Response:", response.data); // Логируем ответ
+    console.log("✅ AI Response received");
+    console.log("Finish reason:", response.data.choices[0].finish_reason);
     
-    const result = JSON.parse(response.data.choices[0].message.content);
-    
-    const finalResult = {
+    const messageContent = response.data.choices[0].message.content;
+    console.log("Raw message:", messageContent);
+
+    // Пробуем починить обрезанный JSON
+    let result;
+    try {
+      result = JSON.parse(messageContent);
+    } catch (parseError) {
+      console.error("❌ JSON parse error, trying to fix...");
+      
+      // Пытаемся починить обрезанный JSON
+      const fixedJson = fixTruncatedJson(messageContent);
+      try {
+        result = JSON.parse(fixedJson);
+        console.log("✅ Fixed JSON successfully");
+      } catch (secondError) {
+        console.error("❌ Could not fix JSON, using fallback");
+        result = { 
+          correct: false, 
+          correctedSentence: sentence, 
+          correctedTranslation: "[Ошибка парсинга]",
+          feedback: "Ошибка при проверке" 
+        };
+      }
+    }
+
+    // Проверяем, что слово осталось в исправленном предложении
+    if (result.correctedSentence && !result.correctedSentence.includes(word)) {
+      console.warn(`⚠️ AI удалил слово "${word}"!`);
+      result.correctedSentence = sentence; // Возвращаем исходное
+      result.feedback = "Ошибка: слово было удалено при исправлении";
+    }
+
+    res.json({
       correct: result.correct || false,
       correctedSentence: result.correctedSentence || sentence,
       correctedTranslation: result.correctedTranslation || "[Перевод не предоставлен]",
       feedback: result.feedback || "Проверка завершена"
-    };
-    
-    res.json(finalResult);
+    });
     
   } catch (err) {
-    console.error("❌ DeepSeek error:", err.message);
-    console.error("📋 Error details:", err.response?.data);
+    console.error("❌ DeepSeek API error:", err.message);
     
-    // ПРОСТОЙ fallback БЕЗ автоисправлений
     res.json({ 
       correct: false, 
-      correctedSentence: sentence, // ← оставляем исходное предложение
+      correctedSentence: sentence,
       correctedTranslation: "[Перевод недоступен]",
-      feedback: "Ошибка проверки. Попробуйте другое предложение." 
+      feedback: "Сервис проверки временно недоступен" 
     });
   }
 });
+
+// Функция для починки обрезанного JSON
+function fixTruncatedJson(jsonString) {
+  try {
+    let fixed = jsonString.trim();
+    
+    if (!fixed.endsWith('}')) {
+      fixed += '"}';
+    }
+    
+    JSON.parse(fixed);
+    return fixed;
+  } catch {
+    return '{"correct": false, "correctedSentence": "", "correctedTranslation": "[Ошибка]", "feedback": "Ошибка проверки"}';
+  }
+}
 
 export default router;
