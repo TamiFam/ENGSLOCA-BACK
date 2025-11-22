@@ -22,26 +22,19 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `Ты строгий преподаватель английского. Проверяй предложения на:
-1. Грамматику (артикли, предлоги, времена)
-2. Правильное использование слова в контексте
-3. Естественность звучания
-
-ВОЗВРАЩАЙ ТОЛЬКО JSON: {correct: boolean, correctedSentence: string, feedback: string}
-feedback на русском, объясни ошибки если есть.`,
+            content: `Ты строгий преподаватель английского. 
+Если есть ошибки - ВСЕГДА возвращай исправленное предложение в correctedSentence.
+Формат JSON: {correct: boolean, correctedSentence: string, feedback: string}
+feedback на русском, объясни конкретные ошибки.`,
           },
           {
             role: "user", 
             content: `Слово: "${word}". Предложение: "${sentence}". 
-Проверь особенно:
-- Артикли (a/an/the)
-- Предлоги 
-- Формы глаголов
-- Естественно ли используется слово "${word}"`,
+Найди и исправь все ошибки. Если слово используется неправильно - предложи корректный вариант.`,
           },
         ],
         response_format: { type: "json_object" },
-        max_tokens: 120,
+        max_tokens: 150,
         temperature: 0,
       },
       {
@@ -53,15 +46,31 @@ feedback на русском, объясни ошибки если есть.`,
     );
 
     const result = JSON.parse(response.data.choices[0].message.content);
+    
+    // Дополнительная проверка - если correctedSentence пустой, используем исходное
+    if (!result.correctedSentence || result.correctedSentence.trim() === '') {
+      result.correctedSentence = sentence;
+    }
+    
     res.json(result);
   } catch (err) {
     console.error("DeepSeek error:", err.message);
-    // Более консервативный fallback
+    // Умный fallback - пытаемся исправить очевидные ошибки
+    const corrected = fixCommonErrors(sentence, word);
     res.json({ 
       correct: false, 
-      correctedSentence: sentence, 
-      feedback: "Проверка не сработала. Перефразируйте предложение." 
+      correctedSentence: corrected, 
+      feedback: "Проверка не сработала. Попробуйте добавить артикль 'a' перед словом." 
     });
   }
 });
+
+// Простая функция для исправления частых ошибок
+function fixCommonErrors(sentence, word) {
+  // Если слово без артикля в начале предложения - добавляем "a"
+  if (sentence.includes(` ${word}`) && !sentence.includes(`a ${word}`) && !sentence.includes(`the ${word}`)) {
+    return sentence.replace(` ${word}`, ` a ${word}`);
+  }
+  return sentence;
+}
 export default router;
