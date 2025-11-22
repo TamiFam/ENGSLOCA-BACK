@@ -14,11 +14,21 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "You evaluate English sentences created by students.",
+            content: `Ты - преподаватель английского языка. Ты проверяешь предложения, составленные студентами. 
+            Отвечай строго в формате JSON на русском языке. 
+            Формат ответа: {"correct": boolean, "correctedSentence": string, "feedback": string}`,
           },
           {
             role: "user",
-            content: `Word: "${word}"\nSentence: "${sentence}"\nCheck if the word is used correctly and if the sentence is grammatically correct. Reply in JSON: {correct, correctedSentence, feedback}`,
+            content: `Слово: "${word}"
+Предложение: "${sentence}"
+
+Проверь:
+1. Правильно ли использовано слово в контексте
+2. Грамматическую правильность предложения
+3. Естественность звучания
+
+Верни ответ в JSON формате на русском языке.`,
           },
         ],
         response_format: { type: "json_object" }
@@ -28,13 +38,14 @@ router.post("/check-sentence", async (req, res) => {
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
           "Content-Type": "application/json",
         },
+        timeout: 30000, // 30 секунд таймаут
       }
     );
 
     res.json(JSON.parse(response.data.choices[0].message.content));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "DeepSeek error" });
+    console.error("DeepSeek API error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Ошибка при проверке предложения" });
   }
 });
 
