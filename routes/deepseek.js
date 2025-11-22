@@ -83,7 +83,7 @@ router.post("/check-sentence", async (req, res) => {
     }
 
     // Проверяем, что слово осталось в исправленном предложении
-    if (result.correctedSentence && !result.correctedSentence.includes(word)) {
+    if (result.correctedSentence && !result.correctedSentence.toLowerCase().includes(word.toLowerCase())) {
       console.warn(`⚠️ AI удалил слово "${word}"!`);
       result.correctedSentence = sentence; // Возвращаем исходное
       result.feedback = "Ошибка: слово было удалено при исправлении";
