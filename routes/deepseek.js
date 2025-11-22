@@ -16,6 +16,8 @@ router.post("/check-sentence", async (req, res) => {
   }
 
   try {
+    console.log(`🔍 Checking: "${word}" in "${sentence}"`); // Логируем запрос
+    
     const response = await axios.post(
       "https://api.deepseek.com/v1/chat/completions",
       {
@@ -23,13 +25,7 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `Проверь английское предложение на:
-          1. Грамматику
-          2. Естественность звучания
-          3. Правильное использование слова
-          
-          Верни JSON: {correct, correctedSentence, correctedTranslation, feedback}
-          Не меняй исходное слово, но исправляй предложение чтобы оно звучало естественно.`
+            content: "Проверь английское предложение. Верни JSON: {correct, correctedSentence, correctedTranslation, feedback}. Не меняй исходное слово."
           },
           {
             role: "user", 
@@ -37,46 +33,42 @@ router.post("/check-sentence", async (req, res) => {
           }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 110,
+        max_tokens: 100,
         temperature: 0,
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         },
-        timeout: 8000,
+        timeout: 10000, // 10 секунд
       }
     );
 
+    console.log("✅ AI Response:", response.data); // Логируем ответ
+    
     const result = JSON.parse(response.data.choices[0].message.content);
     
-    // Дополнительная проверка всех полей
-    if (!result.correctedSentence || result.correctedSentence.trim() === '') {
-      result.correctedSentence = sentence;
-    }
-    if (!result.correctedTranslation || result.correctedTranslation.trim() === '') {
-      result.correctedTranslation = "[Перевод не предоставлен]";
-    }
+    const finalResult = {
+      correct: result.correct || false,
+      correctedSentence: result.correctedSentence || sentence,
+      correctedTranslation: result.correctedTranslation || "[Перевод не предоставлен]",
+      feedback: result.feedback || "Проверка завершена"
+    };
     
-    res.json(result);
+    res.json(finalResult);
+    
   } catch (err) {
-    console.error("DeepSeek error:", err.message);
-    const corrected = fixCommonErrors(sentence, word);
+    console.error("❌ DeepSeek error:", err.message);
+    console.error("📋 Error details:", err.response?.data);
+    
+    // ПРОСТОЙ fallback БЕЗ автоисправлений
     res.json({ 
       correct: false, 
-      correctedSentence: corrected, 
+      correctedSentence: sentence, // ← оставляем исходное предложение
       correctedTranslation: "[Перевод недоступен]",
-      feedback: "Проверка не сработала. Попробуйте добавить артикль 'a' перед словом." 
+      feedback: "Ошибка проверки. Попробуйте другое предложение." 
     });
   }
 });
-
-// Простая функция для исправления частых ошибок
-function fixCommonErrors(sentence, word) {
-  if (sentence.includes(` ${word}`) && !sentence.includes(`a ${word}`) && !sentence.includes(`the ${word}`)) {
-    return sentence.replace(` ${word}`, ` a ${word}`);
-  }
-  return sentence;
-}
 
 export default router;
