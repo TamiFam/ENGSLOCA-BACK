@@ -23,7 +23,13 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "Проверь английское предложение. Верни JSON: {correct, correctedSentence, correctedTranslation, feedback}. Не меняй исходное слово."
+            content: `Проверь английское предложение на:
+          1. Грамматику
+          2. Естественность звучания
+          3. Правильное использование слова
+          
+          Верни JSON: {correct, correctedSentence, correctedTranslation, feedback}
+          Не меняй исходное слово, но исправляй предложение чтобы оно звучало естественно.`
           },
           {
             role: "user", 
@@ -31,7 +37,7 @@ router.post("/check-sentence", async (req, res) => {
           }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 100,
+        max_tokens: 110,
         temperature: 0,
       },
       {
