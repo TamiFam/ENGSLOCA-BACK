@@ -4,9 +4,8 @@ import axios from "axios";
 const router = express.Router();
 
 router.post("/check-sentence", async (req, res) => {
-  const { word, sentence } = req.body; // ← ДОБАВЬТЕ ЭТУ СТРОЧКУ!
+  const { word, sentence } = req.body;
 
-  // Быстрая проверка на клиенте перед отправкой к AI
   if (!sentence.trim() || sentence.length < 3) {
     return res.json({ 
       correct: false, 
@@ -23,15 +22,26 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "Проверь английское предложение. JSON: {correct: boolean, correctedSentence: string, feedback: string}. Русский.",
+            content: `Ты строгий преподаватель английского. Проверяй предложения на:
+1. Грамматику (артикли, предлоги, времена)
+2. Правильное использование слова в контексте
+3. Естественность звучания
+
+ВОЗВРАЩАЙ ТОЛЬКО JSON: {correct: boolean, correctedSentence: string, feedback: string}
+feedback на русском, объясни ошибки если есть.`,
           },
           {
             role: "user", 
-            content: `Слово: "${word}". Предложение: "${sentence}". Проверить грамматику.`,
+            content: `Слово: "${word}". Предложение: "${sentence}". 
+Проверь особенно:
+- Артикли (a/an/the)
+- Предлоги 
+- Формы глаголов
+- Естественно ли используется слово "${word}"`,
           },
         ],
         response_format: { type: "json_object" },
-        max_tokens: 80,
+        max_tokens: 120,
         temperature: 0,
       },
       {
@@ -42,13 +52,15 @@ router.post("/check-sentence", async (req, res) => {
       }
     );
 
-    res.json(JSON.parse(response.data.choices[0].message.content));
+    const result = JSON.parse(response.data.choices[0].message.content);
+    res.json(result);
   } catch (err) {
     console.error("DeepSeek error:", err.message);
+    // Более консервативный fallback
     res.json({ 
-      correct: true, 
+      correct: false, 
       correctedSentence: sentence, 
-      feedback: "Проверка не удалась. Предположительно правильно." 
+      feedback: "Проверка не сработала. Перефразируйте предложение." 
     });
   }
 });
