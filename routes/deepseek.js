@@ -44,7 +44,7 @@ router.post("/check-sentence", async (req, res) => {
         headers: {
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         },
-        timeout: 5000,
+        timeout: 8000,
       }
     );
 
