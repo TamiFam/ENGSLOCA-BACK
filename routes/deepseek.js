@@ -22,15 +22,15 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `Ты строгий преподаватель английского. 
-Если есть ошибки - ВСЕГДА возвращай исправленное предложение в correctedSentence.
-Формат JSON: {correct: boolean, correctedSentence: string, feedback: string}
-feedback на русском, объясни конкретные ошибки.`,
+            content: `Ты проверяешь английские предложения. 
+          ВЕРНИ ТОЛЬКО JSON: {correct: boolean, correctedSentence: string, feedback: string}
+          ВАЖНО: Не заменяй указанное слово! Исправляй предложение, сохраняя слово.
+          feedback на русском, 1-2 предложения.`
           },
           {
             role: "user", 
             content: `Слово: "${word}". Предложение: "${sentence}". 
-Найди и исправь все ошибки. Если слово используется неправильно - предложи корректный вариант.`,
+            Исправь ошибки в предложении, но сохрани слово "${word}".`,
           },
         ],
         response_format: { type: "json_object" },
