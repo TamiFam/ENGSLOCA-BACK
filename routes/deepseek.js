@@ -25,28 +25,27 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `Проверь ТОЛЬКО грамматические ошибки, не стилистику.
-          ПРАВИЛА:
-          1. correctedSentence ДОЛЖНО содержать слово "${word}"
-          2. Если предложение ГРАММАТИЧЕСКИ правильное - correct: true
-          3. НЕ исправляй стилистические предпочтения (предлоги, синонимы)
-          4. Исправляй ТОЛЬКО: неправильные артикли, формы глаголов, порядок слов
-          5. feedback на русском
+            content: `ГЛАВНОЕ ПРАВИЛО: Выражение "${word}" должно остаться НЕИЗМЕННЫМ.
           
-          Примеры правильных решений:
-          - "i have a glimpse in my mind" → correct: true
-          - "i has a glimpse" → correct: false (грамматическая ошибка)
-          
-          Верни JSON: {correct, correctedSentence, correctedTranslation, feedback}`
+Что ДЕЛАТЬ:
+• Сохрани "${word}" без изменений (регистр, форма, порядок слов)
+• Исправляй грамматику ВОКРУГ выражения
+• correct: true если выражение использовано правильно
+• Feedback на русском
+
+Что НЕ ДЕЛАТЬ:
+• Менять само выражение "${word}"
+• Исправлять грамматику внутри выражения
+
+JSON: {correct, correctedSentence, correctedTranslation, feedback}`
           },
           {
             role: "user", 
-            content: `Слово: "${word}". Предложение: "${sentence}".
-          Проверь только грамматику (артикли, предлоги, формы глаголов). Игнорируй пунктуацию и регистр.`,
+            content: `Выражение: "${word}". Предложение: "${sentence}".`,
           }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 150,
+        max_tokens: 250,
         temperature: 0,
       },
       {
@@ -89,7 +88,7 @@ router.post("/check-sentence", async (req, res) => {
     // Проверяем, что слово осталось в исправленном предложении
     if (result.correctedSentence && !result.correctedSentence.toLowerCase().includes(word.toLowerCase())) {
       console.warn(`⚠️ AI удалил слово "${word}"!`);
-      result.correctedSentence = sentence; // Возвращаем исходное
+      result.correctedSentence = sentence;
       result.feedback = "Ошибка: слово было удалено при исправлении";
     }
 
