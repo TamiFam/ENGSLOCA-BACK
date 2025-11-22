@@ -25,17 +25,19 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `Проверь английское предложение на ГРАММАТИЧЕСКИЕ ошибки.
-          ЖЁСТКИЕ ПРАВИЛА:
-          1. correctedSentence ДОЛЖНО содержать слово "${word}" 
-          2. ИГНОРИРУЙ пунктуацию (точки, запятые) и регистр букв
-          3. Проверяй ТОЛЬКО: артикли, предлоги, порядок слов, формы глаголов
-          4. Если нет грамматических ошибок - correct: true
-          5. НЕ "улучшай" стилистически уже правильные предложения
-          6. feedback на русском языке
-          7. correctedTranslation - перевод на русский
+            content: `Проверь ТОЛЬКО грамматические ошибки, не стилистику.
+          ПРАВИЛА:
+          1. correctedSentence ДОЛЖНО содержать слово "${word}"
+          2. Если предложение ГРАММАТИЧЕСКИ правильное - correct: true
+          3. НЕ исправляй стилистические предпочтения (предлоги, синонимы)
+          4. Исправляй ТОЛЬКО: неправильные артикли, формы глаголов, порядок слов
+          5. feedback на русском
           
-          Верни JSON: {correct: boolean, correctedSentence: string, correctedTranslation: string, feedback: string}`
+          Примеры правильных решений:
+          - "i have a glimpse in my mind" → correct: true
+          - "i has a glimpse" → correct: false (грамматическая ошибка)
+          
+          Верни JSON: {correct, correctedSentence, correctedTranslation, feedback}`
           },
           {
             role: "user", 
