@@ -27,11 +27,12 @@ router.post("/check-sentence", async (req, res) => {
             role: "system",
             content: `Проверь английское предложение. 
           ЖЁСТКИЕ ПРАВИЛА:
-          1. correctedSentence ДОЛЖНО содержать слово "${word}" без изменений!
-          2. Если слово используется неправильно - измени контекст вокруг него
-          3. НИКОГДА не заменяй слово "${word}" синонимами!
-          4. feedback на русском языке
-          5. correctedTranslation - перевод на русский
+          1. correctedSentence ДОЛЖНО содержать слово "${word}" 
+          2. Если предложение УЖЕ грамматически правильное - ставь correct: true
+          3. НЕ "улучшай" стилистически уже правильные предложения
+          4. Исправляй ТОЛЬКО реальные грамматические ошибки
+          5. feedback на русском языке
+          6. correctedTranslation - перевод на русский
           
           Верни JSON: {correct: boolean, correctedSentence: string, correctedTranslation: string, feedback: string}`
           },
