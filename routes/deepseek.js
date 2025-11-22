@@ -26,14 +26,14 @@ router.post("/check-sentence", async (req, res) => {
           {
             role: "system", 
             content: `ВЕРНИ предложение с выражением "${word}" без изменений.
-          Исправь только остальные части предложения.
-          
-          JSON: {correct, correctedSentence, correctedTranslation, feedback}`
+Исправь только остальные части предложения.
+
+JSON: {correct, correctedSentence, correctedTranslation, feedback}`
           },
           {
             role: "user", 
             content: `Выражение: "${word}". Предложение: "${sentence}".
-          Проверь, правильно ли использовано выражение в контексте.`,
+Проверь, правильно ли использовано выражение в контексте.`,
           }
         ],
         response_format: { type: "json_object" },
@@ -77,11 +77,18 @@ router.post("/check-sentence", async (req, res) => {
       }
     }
 
-    // Проверяем, что слово осталось в исправленном предложении
-    if (result.correctedSentence && !result.correctedSentence.toLowerCase().includes(word.toLowerCase())) {
-      console.warn(`⚠️ AI удалил слово "${word}"!`);
-      result.correctedSentence = sentence;
-      result.feedback = "Ошибка: слово было удалено при исправлении";
+    // НОВАЯ проверка (ищет части фразы):
+    if (result.correctedSentence) {
+      const wordParts = word.toLowerCase().split(' ');
+      const sentenceLower = result.correctedSentence.toLowerCase();
+      const foundParts = wordParts.filter(part => sentenceLower.includes(part));
+      
+      // Считаем что выражение сохранено если найдено >50% слов
+      if (foundParts.length < wordParts.length * 0.7) {
+        console.warn(`⚠️ AI удалил выражение "${word}"! Сохранено только ${foundParts.length}/${wordParts.length} слов`);
+        result.correctedSentence = sentence;
+        result.feedback = "Ошибка: выражение было изменено при исправлении";
+      }
     }
 
     res.json({
