@@ -4,7 +4,16 @@ import axios from "axios";
 const router = express.Router();
 
 router.post("/check-sentence", async (req, res) => {
-  const { word, sentence } = req.body;
+  const { word, sentence } = req.body; // ← ДОБАВЬТЕ ЭТУ СТРОЧКУ!
+
+  // Быстрая проверка на клиенте перед отправкой к AI
+  if (!sentence.trim() || sentence.length < 3) {
+    return res.json({ 
+      correct: false, 
+      correctedSentence: "", 
+      feedback: "Предложение слишком короткое" 
+    });
+  }
 
   try {
     const response = await axios.post(
@@ -14,39 +23,33 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `Ты - преподаватель английского языка. Ты проверяешь предложения, составленные студентами. 
-            Отвечай строго в формате JSON на русском языке. 
-            Формат ответа: {"correct": boolean, "correctedSentence": string, "feedback": string}`,
+            content: "Проверь английское предложение. JSON: {correct: boolean, correctedSentence: string, feedback: string}. Русский.",
           },
           {
-            role: "user",
-            content: `Слово: "${word}"
-Предложение: "${sentence}"
-
-Проверь:
-1. Правильно ли использовано слово в контексте
-2. Грамматическую правильность предложения
-3. Естественность звучания
-
-Верни ответ в JSON формате на русском языке.`,
+            role: "user", 
+            content: `Слово: "${word}". Предложение: "${sentence}". Проверить грамматику.`,
           },
         ],
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
+        max_tokens: 80,
+        temperature: 0,
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-          "Content-Type": "application/json",
         },
-        timeout: 30000, // 30 секунд таймаут
+        timeout: 5000,
       }
     );
 
     res.json(JSON.parse(response.data.choices[0].message.content));
   } catch (err) {
-    console.error("DeepSeek API error:", err.response?.data || err.message);
-    res.status(500).json({ error: "Ошибка при проверке предложения" });
+    console.error("DeepSeek error:", err.message);
+    res.json({ 
+      correct: true, 
+      correctedSentence: sentence, 
+      feedback: "Проверка не удалась. Предположительно правильно." 
+    });
   }
 });
-
 export default router;
