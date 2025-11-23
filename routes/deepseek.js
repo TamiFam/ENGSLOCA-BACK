@@ -10,7 +10,7 @@ router.post("/check-sentence", async (req, res) => {
     return res.json({ 
       correct: false, 
       correctedSentence: "", 
-      // correctedTranslation: "",
+      correctedTranslation: "",
       feedback: "Предложение слишком короткое" 
     });
   }
@@ -27,45 +27,45 @@ router.post("/check-sentence", async (req, res) => {
             role: "system", 
             content: `Ты — преподаватель английского. Работаешь со словом/идиомой: "${word}"
           
-          ВАЖНЕЙШИЕ ПРАВИЛА:
-          ✅ СЛОВО "${word}" — можно ИЗМЕНЯТЬ ФОРМУ ЧАСТИ РЕЧИ (существительное→прилагательное, глагол→существительное и т.д.)
-          ✅ Можно добавлять артикли, предлоги, изменять окончания
-          ✅ НЕЛЬЗЯ заменять слово синонимами или полностью убирать из предложения
-          ✅ Цель: сделать предложение ГРАММАТИЧЕСКИ ПРАВИЛЬНЫМ и естественным
-          
-          ПРИМЕРЫ РАЗРЕШЕННЫХ ИЗМЕНЕНИЙ:
-          • "He was happiness" → "He was happy" (существительное→прилагательное)
-          • "She confidence" → "She has confidence" (добавлен глагол)
-          • "I make decision" → "I made a decision" (добавлен артикль, изменено время)
-          
-          ФОРМАТ — только JSON:
-          {
-            "correct": true/false,
-            "correctedSentence": "исправленное предложение",
-            "feedback": "объяснение что изменено в слове",
-            "wordChanges": "конкретные изменения формы слова"
-          }`
+ВАЖНЕЙШИЕ ПРАВИЛА:
+✅ СЛОВО "${word}" — можно ИЗМЕНЯТЬ ФОРМУ ЧАСТИ РЕЧИ (существительное→прилагательное, глагол→существительное и т.д.)
+✅ Можно добавлять артикли, предлоги, изменять окончания
+✅ НЕЛЬЗЯ заменять слово синонимами или полностью убирать из предложения
+✅ Цель: сделать предложение ГРАММАТИЧЕСКИ ПРАВИЛЬНЫМ и естественным
+
+ФОРМАТ — только JSON:
+{
+  "correct": true/false,
+  "correctedSentence": "исправленное предложение",
+  "correctedTranslation": "перевод на русский",
+  "feedback": "объяснение что изменено в слове",
+  "wordChanges": "конкретные изменения формы слова"
+}` // ДОБАВИЛ correctedTranslation в формат
           },
           {
             role: "user", 
-            content: `Выражение: "${word}". Предложение: "${sentence}".
-Проверь, правильно ли использовано выражение в контексте.`,
+            content: `Проверь предложение: "${sentence}"
+            
+Учти правила использования слова "${word}":
+- Можно менять часть речи и форму слова
+- Нельзя заменять синонимами
+- Сохрани исходный смысл, где это возможно
+- Дай перевод исправленного предложения на русский`
           }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 300,
+        max_tokens: 350, // Увеличил для перевода
         temperature: 0,
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         },
-        timeout: 12000,
+        timeout: 15000,
       }
     );
 
     console.log("✅ AI Response received");
-    console.log("Finish reason:", response.data.choices[0].finish_reason);
     
     const messageContent = response.data.choices[0].message.content;
     console.log("Raw message:", messageContent);
@@ -77,7 +77,6 @@ router.post("/check-sentence", async (req, res) => {
     } catch (parseError) {
       console.error("❌ JSON parse error, trying to fix...");
       
-      // Пытаемся починить обрезанный JSON
       const fixedJson = fixTruncatedJson(messageContent);
       try {
         result = JSON.parse(fixedJson);
@@ -87,8 +86,9 @@ router.post("/check-sentence", async (req, res) => {
         result = { 
           correct: false, 
           correctedSentence: sentence, 
-          // correctedTranslation: "[Ошибка парсинга]",
-          feedback: "Ошибка при проверке" 
+          correctedTranslation: "[Ошибка парсинга]",
+          feedback: "Ошибка при проверке",
+          wordChanges: "Не удалось проверить"
         };
       }
     }
@@ -104,15 +104,17 @@ router.post("/check-sentence", async (req, res) => {
       if (!hasWordRoot) {
         console.warn(`⚠️ AI удалил выражение "${word}"!`);
         result.correctedSentence = sentence;
+        result.correctedTranslation = "[Выражение было изменено]";
         result.feedback = "Ошибка: выражение было изменено при исправлении";
         result.correct = false;
       }
     }
 
-    // ОБНОВЛЕННЫЙ ответ - убрал correctedTranslation
+    // ОБНОВЛЕННЫЙ ответ - вернул correctedTranslation
     res.json({
       correct: result.correct || false,
       correctedSentence: result.correctedSentence || sentence,
+      correctedTranslation: result.correctedTranslation || "[Перевод не предоставлен]",
       feedback: result.feedback || "Проверка завершена",
       wordChanges: result.wordChanges || "Форма не изменена"
     });
@@ -122,7 +124,9 @@ router.post("/check-sentence", async (req, res) => {
     res.json({ 
       correct: false, 
       correctedSentence: sentence,
-      feedback: "Сервис проверки временно недоступен" 
+      correctedTranslation: "[Перевод недоступен]",
+      feedback: "Сервис проверки временно недоступен",
+      wordChanges: "Не удалось проверить"
     });
   }
 });
@@ -135,7 +139,7 @@ function getWordRoot(word) {
     .slice(0, 5); // Берем первые 5 символов как основу
 }
 
-// Функция для починки обрезанного JSON (без изменений)
+// Функция для починки обрезанного JSON
 function fixTruncatedJson(jsonString) {
   try {
     let fixed = jsonString.trim();
@@ -145,7 +149,7 @@ function fixTruncatedJson(jsonString) {
     JSON.parse(fixed);
     return fixed;
   } catch {
-    return '{"correct": false, "correctedSentence": "", "feedback": "Ошибка проверки"}';
+    return '{"correct": false, "correctedSentence": "", "correctedTranslation": "[Ошибка]", "feedback": "Ошибка проверки", "wordChanges": "Не удалось проверить"}';
   }
 }
 
