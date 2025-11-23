@@ -10,7 +10,7 @@ router.post("/check-sentence", async (req, res) => {
     return res.json({ 
       correct: false, 
       correctedSentence: "", 
-      correctedTranslation: "",
+      // correctedTranslation: "",
       feedback: "Предложение слишком короткое" 
     });
   }
@@ -25,10 +25,26 @@ router.post("/check-sentence", async (req, res) => {
         messages: [
           {
             role: "system", 
-            content: `ВЕРНИ предложение с выражением "${word}" без изменений.
-Исправь только остальные части предложения.
-
-JSON: {correct, correctedSentence, correctedTranslation, feedback}`
+            content: `Ты — преподаватель английского. Работаешь со словом/идиомой: "${word}"
+          
+          ВАЖНЕЙШИЕ ПРАВИЛА:
+          ✅ СЛОВО "${word}" — можно ИЗМЕНЯТЬ ФОРМУ ЧАСТИ РЕЧИ (существительное→прилагательное, глагол→существительное и т.д.)
+          ✅ Можно добавлять артикли, предлоги, изменять окончания
+          ✅ НЕЛЬЗЯ заменять слово синонимами или полностью убирать из предложения
+          ✅ Цель: сделать предложение ГРАММАТИЧЕСКИ ПРАВИЛЬНЫМ и естественным
+          
+          ПРИМЕРЫ РАЗРЕШЕННЫХ ИЗМЕНЕНИЙ:
+          • "He was happiness" → "He was happy" (существительное→прилагательное)
+          • "She confidence" → "She has confidence" (добавлен глагол)
+          • "I make decision" → "I made a decision" (добавлен артикль, изменено время)
+          
+          ФОРМАТ — только JSON:
+          {
+            "correct": true/false,
+            "correctedSentence": "исправленное предложение",
+            "feedback": "объяснение что изменено в слове",
+            "wordChanges": "конкретные изменения формы слова"
+          }`
           },
           {
             role: "user", 
@@ -37,7 +53,7 @@ JSON: {correct, correctedSentence, correctedTranslation, feedback}`
           }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 250,
+        max_tokens: 300,
         temperature: 0,
       },
       {
@@ -71,58 +87,65 @@ JSON: {correct, correctedSentence, correctedTranslation, feedback}`
         result = { 
           correct: false, 
           correctedSentence: sentence, 
-          correctedTranslation: "[Ошибка парсинга]",
+          // correctedTranslation: "[Ошибка парсинга]",
           feedback: "Ошибка при проверке" 
         };
       }
     }
 
-    // НОВАЯ проверка (ищет части фразы):
+    // ОБНОВЛЕННАЯ проверка - ищем корневую основу слова
     if (result.correctedSentence) {
-      const wordParts = word.toLowerCase().split(' ');
+      const wordRoot = getWordRoot(word.toLowerCase());
       const sentenceLower = result.correctedSentence.toLowerCase();
-      const foundParts = wordParts.filter(part => sentenceLower.includes(part));
       
-      // Считаем что выражение сохранено если найдено >50% слов
-      if (foundParts.length < wordParts.length * 0.7) {
-        console.warn(`⚠️ AI удалил выражение "${word}"! Сохранено только ${foundParts.length}/${wordParts.length} слов`);
+      // Ищем корневую основу в предложении
+      const hasWordRoot = wordRoot && sentenceLower.includes(wordRoot);
+      
+      if (!hasWordRoot) {
+        console.warn(`⚠️ AI удалил выражение "${word}"!`);
         result.correctedSentence = sentence;
         result.feedback = "Ошибка: выражение было изменено при исправлении";
+        result.correct = false;
       }
     }
 
+    // ОБНОВЛЕННЫЙ ответ - убрал correctedTranslation
     res.json({
       correct: result.correct || false,
       correctedSentence: result.correctedSentence || sentence,
-      correctedTranslation: result.correctedTranslation || "[Перевод не предоставлен]",
-      feedback: result.feedback || "Проверка завершена"
+      feedback: result.feedback || "Проверка завершена",
+      wordChanges: result.wordChanges || "Форма не изменена"
     });
     
   } catch (err) {
     console.error("❌ DeepSeek API error:", err.message);
-    
     res.json({ 
       correct: false, 
       correctedSentence: sentence,
-      correctedTranslation: "[Перевод недоступен]",
       feedback: "Сервис проверки временно недоступен" 
     });
   }
 });
 
-// Функция для починки обрезанного JSON
+// Новая функция для поиска корневой основы слова
+function getWordRoot(word) {
+  // Простая логика - убираем распространенные окончания
+  return word
+    .replace(/(ity|ness|ous|ly|ing|ed|s)$/, '') // Убираем суффиксы
+    .slice(0, 5); // Берем первые 5 символов как основу
+}
+
+// Функция для починки обрезанного JSON (без изменений)
 function fixTruncatedJson(jsonString) {
   try {
     let fixed = jsonString.trim();
-    
     if (!fixed.endsWith('}')) {
       fixed += '"}';
     }
-    
     JSON.parse(fixed);
     return fixed;
   } catch {
-    return '{"correct": false, "correctedSentence": "", "correctedTranslation": "[Ошибка]", "feedback": "Ошибка проверки"}';
+    return '{"correct": false, "correctedSentence": "", "feedback": "Ошибка проверки"}';
   }
 }
 
