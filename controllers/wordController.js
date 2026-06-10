@@ -128,3 +128,12 @@ export const getAvailableWeeks = async (req, res) => {
     res.status(500).json({ message: "Ошибка при получении списка недель" });
   }
 };
+
+// export const getWord = async (req,res)=> {
+//   try {
+//     const word =  await Word.findById(req.params.id)
+    
+//   } catch (error) {
+    
+//   }
+// }

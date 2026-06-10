@@ -5,6 +5,7 @@ export const addTestResult = async (req, res) => {
 
   try {
     const { userId, week, score, pageInfo } = req.body;
+    console.log("Получен pageInfo:", pageInfo);
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -12,7 +13,9 @@ export const addTestResult = async (req, res) => {
     
     // ✅ Ищем существующий тест для этой недели
     const existingTestIndex = user.testResults.findIndex(
-      test => Number(test.week) === Number(week)
+       test =>
+    Number(test.week) === Number(week) &&
+    String(test.pageInfo?.page) === String(pageInfo?.page)
     );
     let updated = false
     if (existingTestIndex !== -1) {
@@ -46,7 +49,8 @@ export const addTestResult = async (req, res) => {
       });
       updated = true
     }
-
+console.log("Сохраняем:");
+console.log(JSON.stringify(user.testResults, null, 2));
     await user.save();
     
     res.json({ 
@@ -79,15 +83,21 @@ function getLatestTestResults(testResults) {
 }
 
 export const getUserTests = async (req, res) => {
-    try {
-      const user = await User.findById(req.params.userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-      
-      // ✅ Возвращаем только последние результаты для каждой недели
-      const latestResults = getLatestTestResults(user.testResults || []);
-      
-      res.json({ testResults: latestResults });
-    } catch (err) {
-      res.status(500).json({ message: err.message });
+  try {
+    const user = await User.findById(req.params.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
     }
+
+    res.json({
+      testResults: user.testResults || [],
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
 };
