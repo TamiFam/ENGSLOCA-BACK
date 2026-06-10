@@ -24,7 +24,7 @@ app.use(cors({
   origin: [
     "http://localhost:5173",
     'https://wordweek.onrender.com',
-    'http://localhost:5000/api',
+    // 'http://localhost:5000/api',
     'https://engsloca-back.onrender.com'
   ],
   credentials: true,
